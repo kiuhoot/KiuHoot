@@ -10,6 +10,19 @@ type SafeQuestionOption = {
     text: string;
 };
 
+async function autoRevealExpiredQuestion(game: Awaited<ReturnType<typeof Game.findOne>>) {
+    if (!game) return;
+
+    if (
+        game.status === "question" &&
+        game.questionEndsAt &&
+        new Date().getTime() >= game.questionEndsAt.getTime()
+    ) {
+        game.status = "answer_reveal";
+        await game.save();
+    }
+}
+
 export async function GET(request: Request) {
     try {
         await connectDB();
@@ -34,6 +47,8 @@ export async function GET(request: Request) {
                 { status: 404 }
             );
         }
+
+        await autoRevealExpiredQuestion(game);
 
         const players = await Player.find({ gameId: game._id }).sort({
             score: -1,
