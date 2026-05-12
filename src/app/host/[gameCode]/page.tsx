@@ -23,6 +23,7 @@ type GameState = {
         questionsCount: number;
         questionStartedAt: string | null;
         questionEndsAt: string | null;
+        phaseAutoAdvanceAt: string | null;
     };
     currentQuestion: {
         index: number;
@@ -49,6 +50,15 @@ type GameState = {
     }[];
 };
 
+const OPTION_SYMBOLS = ["▲", "◆", "●", "■"];
+
+const OPTION_STYLES = [
+    "bg-[#E21B3C] text-white shadow-red-200",
+    "bg-[#1368CE] text-white shadow-blue-200",
+    "bg-[#D89E00] text-white shadow-yellow-200",
+    "bg-[#26890C] text-white shadow-green-200",
+];
+
 export default function HostGamePage() {
     const params = useParams<{ gameCode: string }>();
     const gameCode = params.gameCode;
@@ -59,8 +69,11 @@ export default function HostGamePage() {
     const [now, setNow] = useState(Date.now());
 
     const playUrl = useMemo(() => {
-        if (typeof window === "undefined") return "";
-        return `${window.location.origin}/play/${gameCode}`;
+        const appUrl =
+            process.env.NEXT_PUBLIC_APP_URL ||
+            (typeof window !== "undefined" ? window.location.origin : "");
+
+        return appUrl ? `${appUrl}/play/${gameCode}` : "";
     }, [gameCode]);
 
     async function loadState() {
@@ -117,11 +130,11 @@ export default function HostGamePage() {
 
         const polling = window.setInterval(() => {
             void loadState();
-        }, 700);
+        }, 600);
 
         const clock = window.setInterval(() => {
             setNow(Date.now());
-        }, 200);
+        }, 150);
 
         return () => {
             window.clearInterval(polling);
@@ -136,6 +149,13 @@ export default function HostGamePage() {
         return Math.max(0, Math.ceil((end - now) / 1000));
     }, [state?.game.questionEndsAt, now]);
 
+    const autoAdvanceSeconds = useMemo(() => {
+        if (!state?.game.phaseAutoAdvanceAt) return 0;
+
+        const end = new Date(state.game.phaseAutoAdvanceAt).getTime();
+        return Math.max(0, Math.ceil((end - now) / 1000));
+    }, [state?.game.phaseAutoAdvanceAt, now]);
+
     const status = state?.game.status;
 
     const isGameScreen =
@@ -144,26 +164,31 @@ export default function HostGamePage() {
         status === "leaderboard" ||
         status === "finished";
 
+    const answerPercent =
+        state && state.players.length > 0
+            ? Math.round((state.answerCount / state.players.length) * 100)
+            : 0;
+
     return (
-        <main className="min-h-screen overflow-hidden bg-[#fff7f7] text-[#111111]">
+        <main className="kh-gradient-bg min-h-screen overflow-hidden text-[#111111]">
             <section
                 className={
                     isGameScreen
-                        ? "mx-auto min-h-screen max-w-7xl px-6 py-5"
+                        ? "mx-auto min-h-screen max-w-7xl px-5 py-5"
                         : "mx-auto grid min-h-screen max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[1fr_380px]"
                 }
             >
                 <div
                     className={
                         isGameScreen
-                            ? "min-h-[calc(100vh-40px)] rounded-[2rem] border border-red-100 bg-white p-7 shadow-xl shadow-red-100"
-                            : "rounded-[2rem] border border-red-100 bg-white p-8 shadow-xl shadow-red-100"
+                            ? "kh-glass-card min-h-[calc(100vh-40px)] rounded-[2rem] p-7"
+                            : "kh-glass-card rounded-[2rem] p-8"
                     }
                 >
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
                             <p className="text-xs font-black uppercase tracking-[0.35em] text-red-600">
-                                Host Screen
+                                KiuHoot Live
                             </p>
                             <h1
                                 className={
@@ -176,7 +201,7 @@ export default function HostGamePage() {
                             </h1>
                         </div>
 
-                        <div className="rounded-2xl bg-red-600 px-5 py-3 text-center text-white shadow-lg shadow-red-200">
+                        <div className="rounded-2xl bg-red-600 px-5 py-3 text-center text-white shadow-xl shadow-red-200">
                             <p className="text-[10px] font-bold uppercase tracking-widest">
                                 Game Code
                             </p>
@@ -198,9 +223,9 @@ export default function HostGamePage() {
 
                     {state && status === "lobby" ? (
                         <div className="mt-10 grid gap-8 lg:grid-cols-[320px_1fr]">
-                            <div className="rounded-[2rem] border border-gray-200 bg-gray-50 p-6 text-center">
+                            <div className="rounded-[2rem] border border-gray-200 bg-white/70 p-6 text-center shadow-sm">
                                 {playUrl ? (
-                                    <div className="rounded-3xl bg-white p-4">
+                                    <div className="rounded-3xl bg-white p-4 shadow-inner">
                                         <QRCodeSVG value={playUrl} size={260} />
                                     </div>
                                 ) : null}
@@ -211,7 +236,7 @@ export default function HostGamePage() {
                             </div>
 
                             <div>
-                                <h2 className="text-3xl font-black">Waiting for players</h2>
+                                <h2 className="text-4xl font-black">Waiting for players</h2>
                                 <p className="mt-2 text-lg text-gray-600">
                                     Players joined:{" "}
                                     <span className="font-black text-red-600">
@@ -228,7 +253,7 @@ export default function HostGamePage() {
                                         state.players.map((player) => (
                                             <div
                                                 key={player.id}
-                                                className="rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 font-bold"
+                                                className="kh-animate-pop rounded-2xl border border-gray-100 bg-white px-5 py-4 font-black shadow-sm"
                                             >
                                                 {player.nickname}
                                             </div>
@@ -239,7 +264,7 @@ export default function HostGamePage() {
                                 <button
                                     onClick={() => hostAction("start")}
                                     disabled={Boolean(actionLoading)}
-                                    className="mt-8 rounded-2xl bg-red-600 px-8 py-4 text-lg font-black text-white shadow-lg shadow-red-200 transition hover:scale-[1.02] hover:bg-red-700 disabled:opacity-60"
+                                    className="mt-8 rounded-2xl bg-red-600 px-8 py-4 text-lg font-black text-white shadow-xl shadow-red-200 transition hover:scale-[1.03] hover:bg-red-700 disabled:opacity-60"
                                 >
                                     {actionLoading === "start" ? "Starting..." : "Start Game"}
                                 </button>
@@ -248,8 +273,8 @@ export default function HostGamePage() {
                     ) : null}
 
                     {state && status === "question" && state.currentQuestion ? (
-                        <div className="flex min-h-[calc(100vh-180px)] flex-col justify-between pt-7">
-                            <div className="animate-[fadeIn_0.35s_ease-out]">
+                        <div className="flex min-h-[calc(100vh-180px)] flex-col justify-between pt-6">
+                            <div className="kh-animate-fade">
                                 <div className="flex items-start justify-between gap-6">
                                     <div className="max-w-5xl">
                                         <p className="text-base font-black text-red-600 md:text-lg">
@@ -257,7 +282,7 @@ export default function HostGamePage() {
                                             {state.game.questionsCount}
                                         </p>
 
-                                        <h2 className="mt-4 text-[clamp(2.4rem,5vw,5.6rem)] font-black leading-[1.05] tracking-tight">
+                                        <h2 className="mt-4 text-[clamp(2.3rem,5vw,5.4rem)] font-black leading-[1.05] tracking-tight">
                                             {state.currentQuestion.questionText}
                                         </h2>
                                     </div>
@@ -265,7 +290,7 @@ export default function HostGamePage() {
                                     <div
                                         className={
                                             secondsLeft <= 5
-                                                ? "animate-pulse rounded-full bg-red-600 px-8 py-6 text-center text-white shadow-xl shadow-red-200"
+                                                ? "kh-timer-danger rounded-full bg-red-600 px-8 py-6 text-center text-white shadow-xl shadow-red-200"
                                                 : "rounded-full bg-red-600 px-8 py-6 text-center text-white shadow-xl shadow-red-200"
                                         }
                                     >
@@ -276,7 +301,7 @@ export default function HostGamePage() {
                                     </div>
                                 </div>
 
-                                <div className="mt-5 h-4 overflow-hidden rounded-full bg-gray-100">
+                                <div className="mt-5 h-5 overflow-hidden rounded-full bg-gray-100 shadow-inner">
                                     <div
                                         className="h-full rounded-full bg-red-600 transition-all duration-200"
                                         style={{
@@ -291,21 +316,29 @@ export default function HostGamePage() {
                                     />
                                 </div>
 
-                                <p className="mt-4 text-lg font-bold text-gray-600">
-                                    Answers submitted:{" "}
-                                    <span className="text-red-600">{state.answerCount}</span> /{" "}
-                                    {state.players.length}
-                                </p>
+                                <div className="mt-4 flex items-center justify-between gap-4">
+                                    <p className="text-lg font-bold text-gray-600">
+                                        Answers submitted:{" "}
+                                        <span className="text-red-600">{state.answerCount}</span> /{" "}
+                                        {state.players.length}
+                                    </p>
+
+                                    <p className="text-lg font-black text-red-600">
+                                        {answerPercent}%
+                                    </p>
+                                </div>
                             </div>
 
-                            <div className="mt-8 grid gap-4 md:grid-cols-2">
+                            <div className="mt-7 grid gap-4 md:grid-cols-2">
                                 {state.currentQuestion.options.map((option) => (
                                     <div
                                         key={option.index}
-                                        className="animate-[popIn_0.3s_ease-out] rounded-[1.5rem] border border-gray-200 bg-gray-50 p-6 text-[clamp(1.2rem,2.1vw,2rem)] font-black shadow-sm"
+                                        className={`kh-option-tile kh-animate-pop ${
+                                            OPTION_STYLES[option.index]
+                                        }`}
                                     >
-                    <span className="mr-4 text-red-600">
-                      {String.fromCharCode(65 + option.index)}
+                    <span className="mr-4 text-3xl">
+                      {OPTION_SYMBOLS[option.index]}
                     </span>
                                         {option.text}
                                     </div>
@@ -315,19 +348,27 @@ export default function HostGamePage() {
                     ) : null}
 
                     {state && status === "answer_reveal" && state.currentQuestion ? (
-                        <div className="flex min-h-[calc(100vh-180px)] flex-col justify-between pt-7">
-                            <div className="animate-[popIn_0.35s_ease-out]">
-                                <p className="text-lg font-black text-red-600">
-                                    Time is over — correct answer
+                        <div className="flex min-h-[calc(100vh-180px)] flex-col justify-between pt-6">
+                            <div className="kh-animate-pop">
+                                <p className="text-lg font-black uppercase tracking-[0.25em] text-red-600">
+                                    Time is over
                                 </p>
 
                                 <h2 className="mt-4 text-[clamp(2.5rem,5vw,5.8rem)] font-black leading-tight">
+                                    Correct answer:
+                                </h2>
+
+                                <p className="mt-3 text-[clamp(2rem,4vw,4.6rem)] font-black text-green-700">
                                     {
                                         state.currentQuestion.options[
                                         state.currentQuestion.correctOptionIndex ?? 0
                                             ]?.text
                                     }
-                                </h2>
+                                </p>
+
+                                <p className="mt-4 text-xl font-bold text-gray-600">
+                                    Leaderboard in {autoAdvanceSeconds}s
+                                </p>
                             </div>
 
                             <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -338,58 +379,57 @@ export default function HostGamePage() {
                                     return (
                                         <div
                                             key={option.index}
-                                            className={`rounded-[1.5rem] border p-6 text-[clamp(1.2rem,2.1vw,2rem)] font-black transition-all duration-500 ${
+                                            className={`kh-option-tile transition-all duration-500 ${
                                                 isCorrect
-                                                    ? "scale-[1.02] border-green-300 bg-green-50 text-green-800 shadow-xl shadow-green-100"
-                                                    : "border-gray-200 bg-gray-50 text-gray-400"
+                                                    ? `${OPTION_STYLES[option.index]} kh-winner-pulse ring-4 ring-white`
+                                                    : "bg-gray-100 text-gray-400 opacity-50"
                                             }`}
                                         >
-                      <span className="mr-4">
-                        {String.fromCharCode(65 + option.index)}
+                      <span className="mr-4 text-3xl">
+                        {OPTION_SYMBOLS[option.index]}
                       </span>
                                             {option.text}
                                         </div>
                                     );
                                 })}
                             </div>
-
-                            <div className="mt-8 flex justify-end gap-3">
-                                <button
-                                    onClick={() => hostAction("show-leaderboard")}
-                                    disabled={Boolean(actionLoading)}
-                                    className="rounded-2xl bg-red-600 px-8 py-4 text-lg font-black text-white shadow-lg shadow-red-200 transition hover:scale-[1.02] hover:bg-red-700 disabled:opacity-60"
-                                >
-                                    Show Leaderboard
-                                </button>
-
-                                <button
-                                    onClick={() => hostAction("next-question")}
-                                    disabled={Boolean(actionLoading)}
-                                    className="rounded-2xl bg-black px-8 py-4 text-lg font-black text-white transition hover:scale-[1.02] hover:bg-gray-800 disabled:opacity-60"
-                                >
-                                    Next Question
-                                </button>
-                            </div>
                         </div>
                     ) : null}
 
                     {state && status === "leaderboard" ? (
-                        <div className="pt-7">
-                            <p className="text-lg font-black text-red-600">Leaderboard</p>
-                            <h2 className="mt-3 text-[clamp(3rem,6vw,6.5rem)] font-black leading-none">
-                                Current Ranking
-                            </h2>
+                        <div className="pt-6">
+                            <p className="text-lg font-black uppercase tracking-[0.25em] text-red-600">
+                                Leaderboard
+                            </p>
+
+                            <div className="flex flex-wrap items-end justify-between gap-4">
+                                <h2 className="mt-3 text-[clamp(3rem,6vw,6.5rem)] font-black leading-none">
+                                    Current Ranking
+                                </h2>
+
+                                <p className="text-xl font-black text-gray-600">
+                                    Next in{" "}
+                                    <span className="text-red-600">{autoAdvanceSeconds}s</span>
+                                </p>
+                            </div>
 
                             <div className="mt-8 grid gap-3">
                                 {state.leaderboard.slice(0, 8).map((player) => (
                                     <div
                                         key={player.id}
-                                        className="animate-[slideUp_0.35s_ease-out] flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-6 py-4 shadow-sm"
+                                        className="kh-animate-slide flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-6 py-4 shadow-md"
                                     >
                                         <div className="flex items-center gap-5">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600 text-xl font-black text-white">
+                                            <div
+                                                className={
+                                                    player.rank === 1
+                                                        ? "flex h-14 w-14 items-center justify-center rounded-full bg-yellow-400 text-2xl font-black text-white shadow-lg shadow-yellow-200"
+                                                        : "flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-2xl font-black text-white"
+                                                }
+                                            >
                                                 {player.rank}
                                             </div>
+
                                             <p className="text-2xl font-black">{player.nickname}</p>
                                         </div>
 
@@ -399,27 +439,23 @@ export default function HostGamePage() {
                                     </div>
                                 ))}
                             </div>
-
-                            <button
-                                onClick={() => hostAction("next-question")}
-                                disabled={Boolean(actionLoading)}
-                                className="mt-8 rounded-2xl bg-red-600 px-8 py-4 text-lg font-black text-white shadow-lg shadow-red-200 transition hover:scale-[1.02] hover:bg-red-700 disabled:opacity-60"
-                            >
-                                Next Question / Finish
-                            </button>
                         </div>
                     ) : null}
 
                     {state && status === "finished" ? (
                         <div className="relative flex min-h-[calc(100vh-160px)] flex-col items-center justify-center overflow-hidden text-center">
-                            <div className="pointer-events-none absolute inset-0">
-                                <div className="absolute left-[15%] top-[20%] h-6 w-6 animate-bounce rounded-full bg-red-500" />
-                                <div className="absolute left-[75%] top-[18%] h-5 w-5 animate-pulse rounded-full bg-yellow-400" />
-                                <div className="absolute left-[25%] top-[75%] h-4 w-4 animate-bounce rounded-full bg-green-500" />
-                                <div className="absolute left-[82%] top-[70%] h-7 w-7 animate-pulse rounded-full bg-red-400" />
+                            <div className="kh-confetti">
+                                <span />
+                                <span />
+                                <span />
+                                <span />
+                                <span />
+                                <span />
+                                <span />
+                                <span />
                             </div>
 
-                            <div className="animate-[popIn_0.45s_ease-out]">
+                            <div className="kh-animate-pop">
                                 <p className="text-lg font-black uppercase tracking-[0.3em] text-red-600">
                                     Game Finished
                                 </p>
@@ -429,7 +465,7 @@ export default function HostGamePage() {
                                 </h2>
 
                                 {state.leaderboard[0] ? (
-                                    <div className="mx-auto mt-10 max-w-2xl rounded-[2rem] border border-yellow-200 bg-yellow-50 p-10 shadow-2xl shadow-yellow-100">
+                                    <div className="kh-winner-card mx-auto mt-10 max-w-2xl rounded-[2rem] border border-yellow-200 bg-yellow-50 p-10 shadow-2xl shadow-yellow-100">
                                         <p className="text-[clamp(3rem,6vw,6rem)] font-black leading-none">
                                             {state.leaderboard[0].nickname}
                                         </p>
@@ -448,7 +484,7 @@ export default function HostGamePage() {
                 </div>
 
                 {!isGameScreen ? (
-                    <aside className="rounded-[2rem] border border-red-100 bg-white p-6 shadow-xl shadow-red-100">
+                    <aside className="kh-glass-card rounded-[2rem] p-6">
                         <h2 className="text-2xl font-black">Players</h2>
 
                         <div className="mt-5 grid gap-3">
@@ -456,7 +492,7 @@ export default function HostGamePage() {
                                 state.players.map((player) => (
                                     <div
                                         key={player.id}
-                                        className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-3"
+                                        className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 shadow-sm"
                                     >
                                         <span className="font-bold">{player.nickname}</span>
                                         <span className="font-black text-red-600">

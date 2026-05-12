@@ -326,19 +326,30 @@ export default function PlayGamePage() {
                         ) : null}
 
                         <div className="mt-7 grid gap-3">
-                            {state.currentQuestion.options.map((option) => (
-                                <button
-                                    key={option.index}
-                                    onClick={() => submitAnswer(option.index)}
-                                    disabled={answering || Boolean(state.myAnswer)}
-                                    className="rounded-2xl border border-gray-200 bg-gray-50 px-5 py-5 text-left text-lg font-black transition hover:border-red-300 hover:bg-red-50 disabled:opacity-60"
-                                >
-                  <span className="mr-3 text-red-600">
-                    {String.fromCharCode(65 + option.index)}
-                  </span>
-                                    {option.text}
-                                </button>
-                            ))}
+                            {state.currentQuestion.options.map((option) => {
+                                const optionStyles = [
+                                    "bg-[#E21B3C] shadow-red-200",
+                                    "bg-[#1368CE] shadow-blue-200",
+                                    "bg-[#D89E00] shadow-yellow-200",
+                                    "bg-[#26890C] shadow-green-200",
+                                ];
+
+                                const symbols = ["▲", "◆", "●", "■"];
+
+                                return (
+                                    <button
+                                        key={option.index}
+                                        onClick={() => submitAnswer(option.index)}
+                                        disabled={answering || Boolean(state.myAnswer)}
+                                        className={`kh-animate-pop rounded-2xl px-5 py-5 text-left text-lg font-black text-white shadow-lg transition active:scale-95 disabled:opacity-60 ${
+                                            optionStyles[option.index]
+                                        }`}
+                                    >
+                                        <span className="mr-3 text-2xl">{symbols[option.index]}</span>
+                                        {option.text}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 ) : null}
