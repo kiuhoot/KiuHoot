@@ -124,7 +124,7 @@ export async function POST(request: Request) {
         const title =
             isRecord(body) && typeof body.title === "string" && body.title.trim()
                 ? body.title.trim()
-                : "Georgia Independence Day Quiz";
+                : "საქართველოს დამოუკიდებლობის დღის ვიქტორინა";
 
         const questions =
             isRecord(body) && "questions" in body

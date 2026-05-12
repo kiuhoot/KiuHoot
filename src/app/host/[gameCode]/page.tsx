@@ -203,7 +203,7 @@ export default function HostGamePage() {
 
                         <div className="rounded-2xl bg-red-600 px-5 py-3 text-center text-white shadow-xl shadow-red-200">
                             <p className="text-[10px] font-bold uppercase tracking-widest">
-                                Game Code
+                                თამაშის კოდი
                             </p>
                             <p className="text-2xl font-black tracking-wider">{gameCode}</p>
                         </div>
@@ -217,7 +217,7 @@ export default function HostGamePage() {
 
                     {!state ? (
                         <div className="mt-10 text-xl font-bold text-gray-500">
-                            Loading game...
+                            თამაში იტვირთება...
                         </div>
                     ) : null}
 
@@ -236,9 +236,9 @@ export default function HostGamePage() {
                             </div>
 
                             <div>
-                                <h2 className="text-4xl font-black">Waiting for players</h2>
+                                <h2 className="text-4xl font-black">მოთამაშეების მოლოდინში</h2>
                                 <p className="mt-2 text-lg text-gray-600">
-                                    Players joined:{" "}
+                                    მოთამაშეები შეუერთდნენ:{" "}
                                     <span className="font-black text-red-600">
                     {state.players.length}
                   </span>
@@ -247,7 +247,7 @@ export default function HostGamePage() {
                                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                                     {state.players.length === 0 ? (
                                         <div className="rounded-2xl border border-dashed border-gray-300 p-6 text-gray-500">
-                                            No players yet.
+                                            მოთამაშეები ჯერ არ არიან.
                                         </div>
                                     ) : (
                                         state.players.map((player) => (
@@ -266,7 +266,7 @@ export default function HostGamePage() {
                                     disabled={Boolean(actionLoading)}
                                     className="mt-8 rounded-2xl bg-red-600 px-8 py-4 text-lg font-black text-white shadow-xl shadow-red-200 transition hover:scale-[1.03] hover:bg-red-700 disabled:opacity-60"
                                 >
-                                    {actionLoading === "start" ? "Starting..." : "Start Game"}
+                                    {actionLoading === "start" ? "იწყება..." : "თამაშის დაწყება"}
                                 </button>
                             </div>
                         </div>
@@ -278,7 +278,7 @@ export default function HostGamePage() {
                                 <div className="flex items-start justify-between gap-6">
                                     <div className="max-w-5xl">
                                         <p className="text-base font-black text-red-600 md:text-lg">
-                                            Question {state.currentQuestion.index + 1} /{" "}
+                                            კითხვა {state.currentQuestion.index + 1} /{" "}
                                             {state.game.questionsCount}
                                         </p>
 
@@ -295,7 +295,7 @@ export default function HostGamePage() {
                                         }
                                     >
                                         <p className="text-xs font-bold uppercase tracking-widest">
-                                            Time
+                                            დრო
                                         </p>
                                         <p className="text-5xl font-black">{secondsLeft}</p>
                                     </div>
@@ -318,7 +318,7 @@ export default function HostGamePage() {
 
                                 <div className="mt-4 flex items-center justify-between gap-4">
                                     <p className="text-lg font-bold text-gray-600">
-                                        Answers submitted:{" "}
+                                        წარდგენილი პასუხები:{" "}
                                         <span className="text-red-600">{state.answerCount}</span> /{" "}
                                         {state.players.length}
                                     </p>
@@ -351,11 +351,11 @@ export default function HostGamePage() {
                         <div className="flex min-h-[calc(100vh-180px)] flex-col justify-between pt-6">
                             <div className="kh-animate-pop">
                                 <p className="text-lg font-black uppercase tracking-[0.25em] text-red-600">
-                                    Time is over
+                                    დრო დასრულდა
                                 </p>
 
                                 <h2 className="mt-4 text-[clamp(2.5rem,5vw,5.8rem)] font-black leading-tight">
-                                    Correct answer:
+                                    სწორი პასუხი:
                                 </h2>
 
                                 <p className="mt-3 text-[clamp(2rem,4vw,4.6rem)] font-black text-green-700">
@@ -367,7 +367,7 @@ export default function HostGamePage() {
                                 </p>
 
                                 <p className="mt-4 text-xl font-bold text-gray-600">
-                                    Leaderboard in {autoAdvanceSeconds}s
+                                    ლიდერბორდი გამოჩნდება {autoAdvanceSeconds} წამში
                                 </p>
                             </div>
 
@@ -399,17 +399,17 @@ export default function HostGamePage() {
                     {state && status === "leaderboard" ? (
                         <div className="pt-6">
                             <p className="text-lg font-black uppercase tracking-[0.25em] text-red-600">
-                                Leaderboard
+                                ლიდერბორდი
                             </p>
 
                             <div className="flex flex-wrap items-end justify-between gap-4">
                                 <h2 className="mt-3 text-[clamp(3rem,6vw,6.5rem)] font-black leading-none">
-                                    Current Ranking
+                                    მიმდინარე რეიტინგი
                                 </h2>
 
                                 <p className="text-xl font-black text-gray-600">
-                                    Next in{" "}
-                                    <span className="text-red-600">{autoAdvanceSeconds}s</span>
+                                    შემდეგი{" "}
+                                    <span className="text-red-600">{autoAdvanceSeconds} წამში</span>
                                 </p>
                             </div>
 
@@ -457,11 +457,11 @@ export default function HostGamePage() {
 
                             <div className="kh-animate-pop">
                                 <p className="text-lg font-black uppercase tracking-[0.3em] text-red-600">
-                                    Game Finished
+                                    თამაში დასრულდა
                                 </p>
 
                                 <h2 className="mt-5 text-[clamp(4rem,9vw,9rem)] font-black leading-none">
-                                    Winner
+                                    გამარჯვებული
                                 </h2>
 
                                 {state.leaderboard[0] ? (
@@ -470,12 +470,12 @@ export default function HostGamePage() {
                                             {state.leaderboard[0].nickname}
                                         </p>
                                         <p className="mt-6 text-4xl font-black text-red-600">
-                                            {state.leaderboard[0].score} points
+                                            {state.leaderboard[0].score} ქულა
                                         </p>
                                     </div>
                                 ) : (
                                     <p className="mt-8 text-xl font-bold text-gray-500">
-                                        No players joined.
+                                        არცერთი მოთამაშე არ შემოუერთდა.
                                     </p>
                                 )}
                             </div>
@@ -485,7 +485,7 @@ export default function HostGamePage() {
 
                 {!isGameScreen ? (
                     <aside className="kh-glass-card rounded-[2rem] p-6">
-                        <h2 className="text-2xl font-black">Players</h2>
+                        <h2 className="text-2xl font-black">მოთამაშეები</h2>
 
                         <div className="mt-5 grid gap-3">
                             {state?.players.length ? (
@@ -502,7 +502,7 @@ export default function HostGamePage() {
                                 ))
                             ) : (
                                 <p className="rounded-2xl border border-dashed border-gray-300 p-4 text-gray-500">
-                                    No players yet.
+                                    მოთამაშეები ჯერ არ არიან.
                                 </p>
                             )}
                         </div>

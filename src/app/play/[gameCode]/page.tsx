@@ -66,6 +66,15 @@ type AnswerResponse = {
     alreadyAnswered?: boolean;
 };
 
+const OPTION_SYMBOLS = ["▲", "◆", "●", "■"];
+
+const OPTION_STYLES = [
+    "bg-[#E21B3C] shadow-red-200",
+    "bg-[#1368CE] shadow-blue-200",
+    "bg-[#D89E00] shadow-yellow-200",
+    "bg-[#26890C] shadow-green-200",
+];
+
 export default function PlayGamePage() {
     const params = useParams<{ gameCode: string }>();
     const gameCode = params.gameCode;
@@ -78,6 +87,9 @@ export default function PlayGamePage() {
     const [error, setError] = useState("");
     const [joining, setJoining] = useState(false);
     const [answering, setAnswering] = useState(false);
+    const [localSelectedOptionIndex, setLocalSelectedOptionIndex] = useState<
+        number | null
+    >(null);
     const [now, setNow] = useState(Date.now());
 
     async function loadState(tokenOverride?: string) {
@@ -146,10 +158,18 @@ export default function PlayGamePage() {
     }
 
     async function submitAnswer(selectedOptionIndex: number) {
-        if (!playerToken || answering || state?.myAnswer) return;
+        if (
+            !playerToken ||
+            answering ||
+            state?.myAnswer ||
+            localSelectedOptionIndex !== null
+        ) {
+            return;
+        }
 
         try {
             setAnswering(true);
+            setLocalSelectedOptionIndex(selectedOptionIndex);
             setError("");
 
             const response = await fetch("/api/games/answer", {
@@ -172,6 +192,7 @@ export default function PlayGamePage() {
 
             await loadState();
         } catch (err) {
+            setLocalSelectedOptionIndex(null);
             setError(err instanceof Error ? err.message : "Failed to submit answer.");
         } finally {
             setAnswering(false);
@@ -204,6 +225,11 @@ export default function PlayGamePage() {
         };
     }, [playerToken, gameCode]);
 
+    useEffect(() => {
+        setLocalSelectedOptionIndex(null);
+        setAnswering(false);
+    }, [state?.game.currentQuestionIndex]);
+
     const secondsLeft = useMemo(() => {
         if (!state?.game.questionEndsAt) return 0;
 
@@ -222,19 +248,19 @@ export default function PlayGamePage() {
                 <section className="mx-auto flex min-h-[85vh] max-w-md flex-col justify-center">
                     <div className="rounded-[2rem] border border-red-100 bg-white p-7 shadow-xl shadow-red-100">
                         <p className="text-sm font-bold uppercase tracking-[0.25em] text-red-600">
-                            Join Game
+                            შეუერთდით თამაშს
                         </p>
 
                         <h1 className="mt-3 text-4xl font-black">KiuHoot</h1>
 
                         <p className="mt-3 text-gray-600">
-                            Game code:{" "}
+                            თამაშის კოდი:{" "}
                             <span className="font-black text-red-600">{gameCode}</span>
                         </p>
 
                         <form onSubmit={joinGame} className="mt-8">
                             <label className="text-sm font-bold text-gray-700">
-                                Your nickname
+                                თქვენი სახელი
                             </label>
 
                             <input
@@ -243,7 +269,7 @@ export default function PlayGamePage() {
                                 maxLength={30}
                                 required
                                 className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-lg font-bold outline-none transition focus:border-red-400 focus:bg-white"
-                                placeholder="Enter your name"
+                                placeholder="შეიყვანეთ თქვენი სახელი"
                             />
 
                             {error ? (
@@ -256,7 +282,7 @@ export default function PlayGamePage() {
                                 disabled={joining}
                                 className="mt-6 w-full rounded-2xl bg-red-600 px-8 py-4 text-lg font-black text-white shadow-lg shadow-red-200 transition hover:bg-red-700 disabled:opacity-60"
                             >
-                                {joining ? "Joining..." : "Join Game"}
+                                {joining ? "შეერთება..." : "შეუერთდით თამაშს"}
                             </button>
                         </form>
                     </div>
@@ -273,11 +299,11 @@ export default function PlayGamePage() {
                         <p className="text-sm font-bold text-gray-500">
                             {state.player.nickname}
                         </p>
-                        <p className="text-xl font-black">{state.player.score} points</p>
+                        <p className="text-xl font-black">{state.player.score} ქულა</p>
                     </div>
 
                     <div className="text-right">
-                        <p className="text-sm font-bold text-gray-500">Rank</p>
+                        <p className="text-sm font-bold text-gray-500">რანგი</p>
                         <p className="text-xl font-black text-red-600">
                             {myRank ? `#${myRank.rank}` : "-"}
                         </p>
@@ -293,11 +319,11 @@ export default function PlayGamePage() {
                 {state.game.status === "lobby" ? (
                     <div className="rounded-[2rem] bg-white p-8 text-center shadow-xl shadow-red-100">
                         <p className="text-sm font-bold uppercase tracking-[0.25em] text-red-600">
-                            Waiting Room
+                            მოსაცდელი ოთახი
                         </p>
-                        <h1 className="mt-5 text-4xl font-black">You are in!</h1>
+                        <h1 className="mt-5 text-4xl font-black">თქვენ შემოსული ხართ!</h1>
                         <p className="mt-4 text-lg leading-8 text-gray-600">
-                            Wait for the host to start the quiz.
+                            დაელოდეთ წამყვანის მიერ ვიქტორინის დაწყებას.
                         </p>
                     </div>
                 ) : null}
@@ -306,12 +332,12 @@ export default function PlayGamePage() {
                     <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
                         <div className="flex items-start justify-between gap-4">
                             <p className="font-black text-red-600">
-                                Question {state.currentQuestion.index + 1} /{" "}
+                                კითხვა {state.currentQuestion.index + 1} /{" "}
                                 {state.game.questionsCount}
                             </p>
 
                             <div className="rounded-full bg-red-600 px-4 py-2 font-black text-white">
-                                {secondsLeft}s
+                                {secondsLeft} წამი
                             </div>
                         </div>
 
@@ -319,34 +345,36 @@ export default function PlayGamePage() {
                             {state.currentQuestion.questionText}
                         </h1>
 
-                        {state.myAnswer ? (
-                            <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-bold text-green-800">
-                                Answer submitted. Wait for the result.
-                            </div>
-                        ) : null}
-
                         <div className="mt-7 grid gap-3">
                             {state.currentQuestion.options.map((option) => {
-                                const optionStyles = [
-                                    "bg-[#E21B3C] shadow-red-200",
-                                    "bg-[#1368CE] shadow-blue-200",
-                                    "bg-[#D89E00] shadow-yellow-200",
-                                    "bg-[#26890C] shadow-green-200",
-                                ];
+                                const lockedOptionIndex =
+                                    state.myAnswer?.selectedOptionIndex ?? localSelectedOptionIndex;
 
-                                const symbols = ["▲", "◆", "●", "■"];
+                                const hasLockedAnswer = lockedOptionIndex !== null;
+                                const isSelected = lockedOptionIndex === option.index;
+                                const isDisabled = answering || hasLockedAnswer;
 
                                 return (
                                     <button
                                         key={option.index}
                                         onClick={() => submitAnswer(option.index)}
-                                        disabled={answering || Boolean(state.myAnswer)}
-                                        className={`kh-animate-pop rounded-2xl px-5 py-5 text-left text-lg font-black text-white shadow-lg transition active:scale-95 disabled:opacity-60 ${
-                                            optionStyles[option.index]
+                                        disabled={isDisabled}
+                                        className={`kh-animate-pop relative rounded-2xl px-5 py-5 text-left text-lg font-black shadow-lg transition active:scale-95 ${
+                                            hasLockedAnswer
+                                                ? isSelected
+                                                    ? `${OPTION_STYLES[option.index]} scale-[1.02] text-white ring-4 ring-black/10`
+                                                    : "bg-gray-200 text-gray-400 shadow-none"
+                                                : `${OPTION_STYLES[option.index]} text-white hover:scale-[1.02]`
                                         }`}
                                     >
-                                        <span className="mr-3 text-2xl">{symbols[option.index]}</span>
+                                        <span className="mr-3 text-2xl">{OPTION_SYMBOLS[option.index]}</span>
                                         {option.text}
+
+                                        {isSelected ? (
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/20 px-3 py-1 text-xs font-black uppercase tracking-wider text-white">
+            ჩაკეტილი
+          </span>
+                                        ) : null}
                                     </button>
                                 );
                             })}
@@ -356,7 +384,7 @@ export default function PlayGamePage() {
 
                 {state.game.status === "answer_reveal" && state.currentQuestion ? (
                     <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
-                        <p className="font-black text-red-600">Result</p>
+                        <p className="font-black text-red-600">შედეგი</p>
 
                         {state.myAnswer ? (
                             <div
@@ -366,20 +394,20 @@ export default function PlayGamePage() {
                                         : "bg-red-50 text-red-800"
                                 }`}
                             >
-                                {state.myAnswer.isCorrect ? "Correct!" : "Incorrect"}
+                                {state.myAnswer.isCorrect ? "სწორია!" : "არასწორია"}
                                 <p className="mt-2 text-3xl">
                                     +{state.myAnswer.pointsEarned ?? 0}
                                 </p>
                             </div>
                         ) : (
                             <div className="mt-5 rounded-2xl bg-gray-50 px-5 py-5 text-center font-black text-gray-600">
-                                No answer submitted.
+                                პასუხი არ არის წარდგენილი.
                             </div>
                         )}
 
                         <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-5">
                             <p className="text-sm font-bold text-green-700">
-                                Correct answer
+                                სწორი პასუხი
                             </p>
                             <p className="mt-2 text-2xl font-black text-green-900">
                                 {
@@ -394,8 +422,8 @@ export default function PlayGamePage() {
 
                 {state.game.status === "leaderboard" ? (
                     <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
-                        <p className="font-black text-red-600">Leaderboard</p>
-                        <h1 className="mt-3 text-3xl font-black">Current ranking</h1>
+                        <p className="font-black text-red-600">ლიდერბორდი</p>
+                        <h1 className="mt-3 text-3xl font-black">მიმდინარე რეიტინგი</h1>
 
                         <div className="mt-6 grid gap-3">
                             {state.leaderboard.slice(0, 10).map((player) => (
@@ -420,27 +448,27 @@ export default function PlayGamePage() {
 
                 {state.game.status === "finished" ? (
                     <div className="rounded-[2rem] bg-white p-8 text-center shadow-xl shadow-red-100">
-                        <p className="font-black text-red-600">Game Finished</p>
+                        <p className="font-black text-red-600">თამაში დასრულდა</p>
 
-                        <h1 className="mt-4 text-4xl font-black">Final Result</h1>
+                        <h1 className="mt-4 text-4xl font-black">საბოლოო შედეგი</h1>
 
                         {state.leaderboard[0] ? (
                             <div className="mt-8 rounded-[2rem] bg-yellow-50 p-6">
-                                <p className="text-sm font-bold text-gray-600">Winner</p>
+                                <p className="text-sm font-bold text-gray-600">გამარჯვებული</p>
                                 <p className="mt-2 text-3xl font-black">
                                     {state.leaderboard[0].nickname}
                                 </p>
                                 <p className="mt-2 text-xl font-black text-red-600">
-                                    {state.leaderboard[0].score} points
+                                    {state.leaderboard[0].score} ქულა
                                 </p>
                             </div>
                         ) : null}
 
                         {myRank ? (
                             <div className="mt-6 rounded-2xl bg-gray-50 p-5">
-                                <p className="text-sm font-bold text-gray-600">Your result</p>
+                                <p className="text-sm font-bold text-gray-600">თქვენი შედეგი</p>
                                 <p className="mt-2 text-2xl font-black">
-                                    #{myRank.rank} — {myRank.score} points
+                                    #{myRank.rank} — {myRank.score} ქულა
                                 </p>
                             </div>
                         ) : null}
